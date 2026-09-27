@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IBM Bob — Gut Check Audit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom scrollbar for textarea */
+    textarea::-webkit-scrollbar { width: 6px; }
+    textarea::-webkit-scrollbar-track { background: #0f172a; }
+    textarea::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+    /* Mono font for diff */
+    .font-mono-code { font-family: "Fira Code", "Cascadia Code", "Consolas", monospace; }
+
+    /* Fade-in animation */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.35s ease-out both; }
+
+    /* Verdict badge colours */
+    .badge-red   { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.45); color: #f87171; }
+    .badge-green { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.4);  color: #4ade80; }
+    .badge-blue  { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.4); color: #60a5fa; }
+
+    /* Risk pill colours */
+    .pill-high   { background: rgba(239,68,68,0.18); color: #f87171; }
+    .pill-medium { background: rgba(251,191,36,0.18); color: #fbbf24; }
+    .pill-low    { background: rgba(34,197,94,0.15); color: #4ade80; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-200 antialiased">
+
+  <!-- ── Header ── -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-10">
+    <div class="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
+      <img
+        src="/bob-standing-BECrMjXJ.webp"
+        alt="IBM Bob Mascot"
+        class="w-10 h-10 rounded-lg border border-slate-800 bg-slate-900/50 p-1 object-contain flex-shrink-0"
+        onerror="this.style.display='none'"
+      />
+      <div>
+        <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-blue-500 to-indigo-400 bg-clip-text text-transparent">🤖 IBM Bob: Gut Check Audit</h1>
+        <p class="text-xs text-slate-400">Confidence vs. reality — measured.</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main ── -->
+  <main class="max-w-3xl mx-auto px-6 py-10 space-y-8">
+
+    <!-- Form card -->
+    <section class="bg-slate-900/80 border border-slate-800 rounded-2xl p-8 shadow-xl">
+      <h2 class="text-lg font-semibold text-white mb-6">Run a Gut Check Audit</h2>
+
+      <form id="auditForm" class="space-y-6" novalidate>
+
+        <!-- Confidence -->
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-2">
+            Confidence Rating
+            <span class="text-slate-500 font-normal ml-1">(1 = very unsure · 5 = very confident)</span>
+          </label>
+          <div class="flex gap-3" id="confidenceGroup" role="group" aria-label="Confidence rating">
+            <!-- Radio pills 1–5 -->
+            <script>
+              document.addEventListener("DOMContentLoaded", () => {
+                const group = document.getElementById("confidenceGroup");
+                for (let i = 1; i <= 5; i++) {
+                  const id = `conf-${i}`;
+                  const label = document.createElement("label");
+                  label.htmlFor = id;
+                  label.textContent = i;
+                  label.className =
+                    "cursor-pointer select-none px-4 py-2 rounded-lg border text-sm font-semibold " +
+                    "border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 " +
+                    "has-[:checked]:bg-indigo-600 has-[:checked]:border-indigo-500 has-[:checked]:text-white transition-colors";
+                  const input = document.createElement("input");
+                  input.type = "radio";
+                  input.name = "confidence";
+                  input.id = id;
+                  input.value = i;
+                  input.className = "sr-only";
+                  if (i === 3) input.checked = true; // default
+                  label.prepend(input);
+                  group.appendChild(label);
+                }
+              });
+            </script>
+          </div>
+        </div>
+
+        <!-- Statement -->
+        <div>
+          <label for="statement" class="block text-sm font-medium text-slate-300 mb-2">
+            Stated Testing / Uncertainty
+          </label>
+          <input
+            id="statement"
+            name="statement"
+            type="text"
+            placeholder='e.g. "Tested happy path manually, not sure about edge cases"'
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-200
+                   placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+          />
+        </div>
+
+        <!-- Diff textarea -->
+        <div>
+          <label for="diffText" class="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-3">
+            Git Diff
+            <span class="text-slate-500 font-normal">(paste raw unified diff output)</span>
+            <button type="button" id="btn-sample-diff" class="text-xs text-sky-400 hover:underline ml-auto">⚡ Load Sample Risky Diff</button>
+          </label>
+          <textarea
+            id="diffText"
+            name="diffText"
+            rows="14"
+            placeholder="Paste your git diff here…&#10;&#10;diff --git a/src/auth/login.js b/src/auth/login.js&#10;--- a/src/auth/login.js&#10;+++ b/src/auth/login.js&#10;@@ -1,3 +1,5 @@&#10;+  if (user.role === 'admin') { bypassMFA = true; }"
+            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-sm text-slate-200
+                   placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+                   font-mono-code resize-y transition"
+            required
+          ></textarea>
+        </div>
+
+        <!-- Submit -->
+        <button
+          type="submit"
+          id="submitBtn"
+          class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold
+                 py-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400
+                 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          <svg id="spinnerIcon" class="hidden animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+          </svg>
+          <span id="btnLabel">Run Gut Check Audit</span>
+        </button>
+
+        <!-- Inline error -->
+        <p id="formError" class="hidden text-sm text-red-400 text-center"></p>
+
+      </form>
+    </section>
+
+    <!-- Result card (hidden until populated) -->
+    <section id="resultCard" class="hidden fade-in bg-slate-900/80 border border-slate-800 rounded-2xl p-8 shadow-xl space-y-6">
+
+      <!-- Verdict badge -->
+      <div class="flex flex-wrap items-center gap-3">
+        <span id="verdictBadge" class="inline-flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg badge-red"></span>
+        <span id="riskPill" class="text-xs font-semibold px-3 py-1 rounded-full pill-high"></span>
+        <span id="scoreText" class="text-xs text-slate-500 ml-auto"></span>
+      </div>
+
+      <!-- Narrative -->
+      <div id="narrativeBox" class="bg-slate-800/60 border border-slate-700 rounded-xl p-5 text-sm text-slate-300 leading-relaxed"></div>
+
+      <!-- Metrics grid -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-slate-800/50 rounded-xl p-4 text-center">
+          <div id="metSensitive" class="text-2xl font-bold text-white">0</div>
+          <div class="text-xs text-slate-400 mt-1">Sensitive Paths</div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-4 text-center">
+          <div id="metUntested" class="text-2xl font-bold text-white">0</div>
+          <div class="text-xs text-slate-400 mt-1">Untested Files</div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-4 text-center">
+          <div id="metComplexity" class="text-2xl font-bold text-white">0</div>
+          <div class="text-xs text-slate-400 mt-1">Complexity Flags</div>
+        </div>
+      </div>
+
+      <!-- Detailed hit lists -->
+      <div id="detailLists" class="space-y-3 text-sm"></div>
+
+    </section>
+
+  </main>
+
+  <footer class="text-center text-xs text-slate-600 py-8 border-t border-slate-800/60 mt-4">
+    Gut Check — confidence vs. reality, measured.
+  </footer>
+
+  <!-- ── Client Logic ── -->
+  <script>
+    const form       = document.getElementById("auditForm");
+    const resultCard = document.getElementById("resultCard");
+    const submitBtn  = document.getElementById("submitBtn");
+    const spinner    = document.getElementById("spinnerIcon");
+    const btnLabel   = document.getElementById("btnLabel");
+    const formError  = document.getElementById("formError");
+
+    function setLoading(on) {
+      submitBtn.disabled = on;
+      spinner.classList.toggle("hidden", !on);
+      btnLabel.textContent = on ? "Analyzing…" : "Run Gut Check Audit";
+    }
+
+    function showError(msg) {
+      formError.textContent = msg;
+      formError.classList.remove("hidden");
+    }
+
+    function clearError() {
+      formError.classList.add("hidden");
+      formError.textContent = "";
+    }
+
+    function renderResult(data) {
+      const { riskLevel, score, verdict, verdictEmoji, narrative, metrics } = data;
+
+      // Badge
+      const badge = document.getElementById("verdictBadge");
+      badge.textContent = `${verdictEmoji} ${verdict}`;
+      badge.className = "inline-flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg";
+      if (verdict === "OVERCONFIDENT BLIND SPOT") badge.classList.add("badge-red");
+      else if (verdict === "UNDERCONFIDENT")       badge.classList.add("badge-blue");
+      else                                          badge.classList.add("badge-green");
+
+      // Risk pill
+      const pill = document.getElementById("riskPill");
+      pill.textContent = `${riskLevel} RISK`;
+      pill.className = "text-xs font-semibold px-3 py-1 rounded-full";
+      if (riskLevel === "HIGH")        pill.classList.add("pill-high");
+      else if (riskLevel === "MEDIUM") pill.classList.add("pill-medium");
+      else                             pill.classList.add("pill-low");
+
+      // Score
+      document.getElementById("scoreText").textContent = `Risk score: ${score}/4`;
+
+      // Narrative
+      document.getElementById("narrativeBox").textContent = narrative || "—";
+
+      // Metrics
+      document.getElementById("metSensitive").textContent = metrics.sensitiveHits.length;
+      document.getElementById("metUntested").textContent  = metrics.coverageResult.untestedFiles.length;
+      document.getElementById("metComplexity").textContent = metrics.complexityFlags.length;
+
+      // Detail lists
+      const details = document.getElementById("detailLists");
+      details.innerHTML = "";
+
+      if (metrics.sensitiveHits.length > 0) {
+        const section = document.createElement("div");
+        section.innerHTML = `<p class="text-slate-400 font-semibold mb-1">⚑ Sensitive paths matched</p>` +
+          metrics.sensitiveHits.map(h =>
+            `<div class="font-mono-code bg-slate-800 rounded px-3 py-1 text-slate-300 mb-1 text-xs">${h.file} <span class="text-slate-500">— ${h.pattern}</span></div>`
+          ).join("");
+        details.appendChild(section);
+      }
+
+      if (metrics.coverageResult.untestedFiles.length > 0) {
+        const section = document.createElement("div");
+        section.innerHTML = `<p class="text-slate-400 font-semibold mb-1">⚠ No test coverage detected</p>` +
+          metrics.coverageResult.untestedFiles.map(f =>
+            `<div class="font-mono-code bg-slate-800 rounded px-3 py-1 text-slate-300 mb-1 text-xs">${f}</div>`
+          ).join("");
+        details.appendChild(section);
+      }
+
+      if (metrics.complexityFlags.length > 0) {
+        const section = document.createElement("div");
+        section.innerHTML = `<p class="text-slate-400 font-semibold mb-1">⊛ Complexity flags</p>` +
+          metrics.complexityFlags.map(f =>
+            `<div class="font-mono-code bg-slate-800 rounded px-3 py-1 text-slate-300 mb-1 text-xs">${f.file} <span class="text-slate-500">— ${f.reason}</span></div>`
+          ).join("");
+        details.appendChild(section);
+      }
+
+      // Reveal
+      resultCard.classList.remove("hidden");
+      resultCard.classList.add("fade-in");
+      resultCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // ── Sample diff quick-fill ──
+    const SAMPLE_DIFF = `diff --git a/src/auth/login.js b/src/auth/login.js
+--- a/src/auth/login.js
++++ b/src/auth/login.js
+@@ -1,3 +1,5 @@
+ if (user.role === 'admin') {
++   bypassMFA = true;
+ }`;
+
+    document.getElementById("btn-sample-diff").addEventListener("click", () => {
+      document.getElementById("diffText").value = SAMPLE_DIFF;
+      document.getElementById("statement").value = "Tested happy path manually";
+      // Set confidence radio to 5
+      const radio5 = document.querySelector('input[name="confidence"][value="5"]');
+      if (radio5) { radio5.checked = true; radio5.dispatchEvent(new Event("change")); }
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearError();
+
+      const confidence = document.querySelector('input[name="confidence"]:checked')?.value;
+      const statement  = document.getElementById("statement").value.trim();
+      const diffText   = document.getElementById("diffText").value.trim();
+
+      if (!confidence) { showError("Please select a confidence rating."); return; }
+      if (!diffText)   { showError("Please paste a git diff before running the audit."); return; }
+
+      setLoading(true);
+      resultCard.classList.add("hidden");
+
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confidence: Number(confidence), statement, diffText }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.error || `Server error ${res.status}`);
+          return;
+        }
+
+        renderResult(data);
+      } catch (err) {
+        showError("Network error — is the server running?");
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

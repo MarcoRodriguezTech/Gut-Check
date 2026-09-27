@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IBM Bob — Gut Check Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    background-color: #020817;
+    background-image: url('./conny-schneider-xuTJZ7uD7PI-unsplash.jpg');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: #cbd5e1;
+    padding: 40px 20px 60px;
+  }
+
+  .wrapper { max-width: 1080px; margin: 0 auto; }
+
+  /* ── Header ──────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #1e293b;
+  }
+  .mascot {
+    width: 52px; height: 52px;
+    border-radius: 10px;
+    border: 1px solid #1e293b;
+    background: #0f172a;
+    padding: 5px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  .header-text h1 {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #3b82f6, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+  }
+  .header-text p {
+    font-size: 12px;
+    color: #475569;
+    margin-top: 2px;
+  }
+
+  /* ── Metrics Bar ─────────────────────── */
+  .metrics-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .metric-card {
+    background: rgba(15,23,42,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(30,41,59,0.8);
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .metric-card .metric-val {
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: #ffffff;
+  }
+  .metric-card .metric-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-top: 6px;
+  }
+  .metric-total .metric-val  { color: #e2e8f0; }
+  .metric-red   .metric-val  { color: #f87171; }
+  .metric-green .metric-val  { color: #34d399; }
+  .metric-blue  .metric-val  { color: #38bdf8; }
+
+  /* ── Scenario Grid ───────────────────── */
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .scenario-card {
+    background: rgba(15,23,42,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 10px;
+    border: 1px solid rgba(30,41,59,0.8);
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .card-border-red   { border-left: 3px solid rgba(248,113,113,0.5); }
+  .card-border-green { border-left: 3px solid rgba(52,211,153,0.5); }
+  .card-border-blue  { border-left: 3px solid rgba(56,189,248,0.5); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(30,41,59,0.8);
+    background: rgba(10,15,29,0.7);
+  }
+  .card-title-row { display: flex; align-items: center; gap: 10px; }
+  .scenario-id {
+    font-size: 11px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    color: #64748b;
+  }
+  .scenario-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f1f5f9;
+  }
+  .card-badges { display: flex; align-items: center; gap: 8px; }
+
+  .card-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── Blocks inside card ──────────────── */
+  .block-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #94a3b8;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* Dev Input */
+  .dev-input-row { display: flex; align-items: flex-start; gap: 14px; }
+  .conf-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(2,8,23,0.8);
+    border: 1px solid rgba(30,41,59,0.6);
+    border-radius: 8px;
+    padding: 8px 14px;
+    flex-shrink: 0;
+  }
+  .conf-number {
+    font-size: 28px;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1;
+  }
+  .conf-denom { font-size: 14px; color: #64748b; }
+  .conf-sublabel { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+  .dev-statement {
+    font-size: 14px;
+    color: #e2e8f0;
+    font-style: italic;
+    font-weight: 500;
+    padding-top: 4px;
+    line-height: 1.65;
+  }
+
+  /* Diff Analysis */
+  .diff-block {
+    background: rgba(2,8,23,0.8);
+    border: 1px solid rgba(30,41,59,0.6);
+    border-radius: 6px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .diff-row { display: flex; flex-direction: column; gap: 6px; }
+  .file-path {
+    font-size: 13px;
+    font-weight: 700;
+    color: #7dd3fc;
+    word-break: break-all;
+  }
+  .diff-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* Narrative */
+  .narrative-box {
+    background: rgba(2,8,23,0.9);
+    border: 1px solid rgba(100,116,139,0.35);
+    border-radius: 8px;
+    padding: 14px 16px;
+    box-shadow: inset 0 1px 8px rgba(0,0,0,0.3);
+  }
+  .narrative {
+    font-size: 15px;
+    font-weight: 500;
+    color: #f1f5f9;
+    line-height: 1.7;
+  }
+
+  /* ── Pills & Badges ──────────────────── */
+  .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+
+  .pill {
+    display: inline-block;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .pill-green  { background: rgba(52,211,153,0.1);  color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+  .pill-red    { background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+  .pill-muted  { background: rgba(148,163,184,0.07); color: #64748b; border: 1px solid rgba(148,163,184,0.12); }
+
+  .badge {
+    display: inline-block;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 5px;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge-red   { background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+  .badge-green { background: rgba(52,211,153,0.1);  color: #34d399; border: 1px solid rgba(52,211,153,0.2); }
+  .badge-blue  { background: rgba(56,189,248,0.1);  color: #38bdf8; border: 1px solid rgba(56,189,248,0.2); }
+
+  .risk-pill {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .risk-high   { background: rgba(248,113,113,0.1); color: #fca5a5; border: 1px solid rgba(248,113,113,0.2); }
+  .risk-medium { background: rgba(251,191,36,0.1);  color: #fcd34d; border: 1px solid rgba(251,191,36,0.2); }
+  .risk-low    { background: rgba(52,211,153,0.1);  color: #6ee7b7; border: 1px solid rgba(52,211,153,0.2); }
+
+  /* ── Footer ──────────────────────────── */
+  footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 11px;
+    color: #334155;
+    border-top: 1px solid #1e293b;
+    padding-top: 16px;
+  }
+
+  @media (max-width: 720px) {
+    .metrics-bar { grid-template-columns: repeat(2, 1fr); }
+    .scenario-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="fixed inset-0 pointer-events-none" style="position:fixed;inset:0;background:rgba(2,8,23,0.75);z-index:0;"></div>
+<div class="wrapper" style="position:relative;z-index:10;">
+
+  <header>
+    <img src="./bob-standing-BECrMjXJ.webp" alt="IBM Bob Mascot" class="mascot">
+    <div class="header-text">
+      <h1>IBM Bob: Gut Check Dashboard</h1>
+      <p>Pre-Deployment Risk Calibration vs. Developer Confidence &nbsp;·&nbsp; Generated: 2026-09-27T13:29:49.088Z</p>
+    </div>
+  </header>
+
+  <div class="metrics-bar">
+    <div class="metric-card metric-total">
+      <div class="metric-val">4</div>
+      <div class="metric-label">Total Scenarios</div>
+    </div>
+    <div class="metric-card metric-red">
+      <div class="metric-val">2</div>
+      <div class="metric-label">Overconfident Blind Spots</div>
+    </div>
+    <div class="metric-card metric-green">
+      <div class="metric-val">1</div>
+      <div class="metric-label">Calibrated</div>
+    </div>
+    <div class="metric-card metric-blue">
+      <div class="metric-val">1</div>
+      <div class="metric-label">Underconfident</div>
+    </div>
+  </div>
+
+  <div class="scenario-grid">
+
+    <div class="scenario-card card-border-red">
+      <div class="card-header">
+        <div class="card-title-row">
+          <span class="scenario-id mono">#1</span>
+          <span class="scenario-label">Overconfident</span>
+        </div>
+        <div class="card-badges">
+          <span class="risk-pill risk-high">HIGH RISK</span>
+          <span class="badge badge-red">⚠ OVERCONFIDENT BLIND SPOT</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="block">
+          <div class="block-label">DEV INPUT</div>
+          <div class="dev-input-row">
+            <div class="conf-box">
+              <span class="conf-number mono">5<span class="conf-denom">/5</span></span>
+              <span class="conf-sublabel">confidence</span>
+            </div>
+            <p class="dev-statement">"Tested happy path manually"</p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-label">DIFF ANALYSIS</div>
+          <div class="diff-block">
+        <div class="diff-row">
+          <span class="mono file-path">src/auth/login.js</span>
+          <div class="diff-meta">
+            <span class="pill pill-green">+22</span>
+            <span class="pill pill-red">-2</span>
+            <span class="pill pill-muted">branches: 0</span>
+            <span class="pill pill-muted">test ratio: 0:1</span>
+          </div>
+        </div></div>
+        </div>
+
+        <div class="block">
+          <div class="block-label">NARRATIVE VERDICT</div>
+          <div class="narrative-box">
+            <p class="narrative">You reported "Tested happy path manually", but the diff modifies `src/auth/login.js` with 7 new branches and 0 tests. Manual happy-path testing frequently misses these edge cases.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scenario-card card-border-green">
+      <div class="card-header">
+        <div class="card-title-row">
+          <span class="scenario-id mono">#2</span>
+          <span class="scenario-label">Calibrated</span>
+        </div>
+        <div class="card-badges">
+          <span class="risk-pill risk-high">HIGH RISK</span>
+          <span class="badge badge-green">✓ CALIBRATED</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="block">
+          <div class="block-label">DEV INPUT</div>
+          <div class="dev-input-row">
+            <div class="conf-box">
+              <span class="conf-number mono">2<span class="conf-denom">/5</span></span>
+              <span class="conf-sublabel">confidence</span>
+            </div>
+            <p class="dev-statement">"Not sure about DB migration"</p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-label">DIFF ANALYSIS</div>
+          <div class="diff-block">
+        <div class="diff-row">
+          <span class="mono file-path">db/migrations/0042_add_user_roles.sql</span>
+          <div class="diff-meta">
+            <span class="pill pill-green">+5</span>
+            <span class="pill pill-red">-0</span>
+            <span class="pill pill-muted">branches: 0</span>
+            <span class="pill pill-muted">test ratio: 0:1</span>
+          </div>
+        </div></div>
+        </div>
+
+        <div class="block">
+          <div class="block-label">NARRATIVE VERDICT</div>
+          <div class="narrative-box">
+            <p class="narrative">Confidence aligns with the detected risk level. The developer's gut feeling matches the signals in the diff.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scenario-card card-border-blue">
+      <div class="card-header">
+        <div class="card-title-row">
+          <span class="scenario-id mono">#3</span>
+          <span class="scenario-label">Underconfident</span>
+        </div>
+        <div class="card-badges">
+          <span class="risk-pill risk-low">LOW RISK</span>
+          <span class="badge badge-blue">UNDERCONFIDENT</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="block">
+          <div class="block-label">DEV INPUT</div>
+          <div class="dev-input-row">
+            <div class="conf-box">
+              <span class="conf-number mono">1<span class="conf-denom">/5</span></span>
+              <span class="conf-sublabel">confidence</span>
+            </div>
+            <p class="dev-statement">"Nervous about breaking CSS"</p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-label">DIFF ANALYSIS</div>
+          <div class="diff-block">
+        <div class="diff-row">
+          <span class="mono file-path">src/components/Button.css</span>
+          <div class="diff-meta">
+            <span class="pill pill-green">+3</span>
+            <span class="pill pill-red">-2</span>
+            <span class="pill pill-muted">branches: 0</span>
+            <span class="pill pill-muted">test ratio: 0:1</span>
+          </div>
+        </div></div>
+        </div>
+
+        <div class="block">
+          <div class="block-label">NARRATIVE VERDICT</div>
+          <div class="narrative-box">
+            <p class="narrative">Developer confidence is low but the change appears low-risk. This might be self-doubt rather than actual danger.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scenario-card card-border-red">
+      <div class="card-header">
+        <div class="card-title-row">
+          <span class="scenario-id mono">#4</span>
+          <span class="scenario-label">Near-Miss Edge Case</span>
+        </div>
+        <div class="card-badges">
+          <span class="risk-pill risk-high">HIGH RISK</span>
+          <span class="badge badge-red">⚠ OVERCONFIDENT BLIND SPOT</span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="block">
+          <div class="block-label">DEV INPUT</div>
+          <div class="dev-input-row">
+            <div class="conf-box">
+              <span class="conf-number mono">3<span class="conf-denom">/5</span></span>
+              <span class="conf-sublabel">confidence</span>
+            </div>
+            <p class="dev-statement">"Tested standard user flow, modified payment route"</p>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-label">DIFF ANALYSIS</div>
+          <div class="diff-block">
+        <div class="diff-row">
+          <span class="mono file-path">src/payments/gateway.js</span>
+          <div class="diff-meta">
+            <span class="pill pill-green">+7</span>
+            <span class="pill pill-red">-1</span>
+            <span class="pill pill-muted">branches: 0</span>
+            <span class="pill pill-muted">test ratio: 0:1</span>
+          </div>
+        </div></div>
+        </div>
+
+        <div class="block">
+          <div class="block-label">NARRATIVE VERDICT</div>
+          <div class="narrative-box">
+            <p class="narrative">You reported "Tested standard user flow, modified payment route", but the diff modifies `src/payments/gateway.js` with 3 new branches and 0 tests. Manual happy-path testing frequently misses these edge cases.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>
